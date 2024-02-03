@@ -1,4 +1,4 @@
-package com.example.voter_engine.expection;
+package com.example.voter_engine.Entity.expection;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;

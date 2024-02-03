@@ -1,4 +1,4 @@
-package com.example.voter_engine.expection;
+package com.example.voter_engine.Entity.expection;
 
 public class recordMismatchException extends RuntimeException{
     private String message;

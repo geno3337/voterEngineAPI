@@ -38,7 +38,7 @@ public class adminController {
     }
 
     @PostMapping(value = "/startRegistration")
-    public String startRegistration(@RequestBody @Valid registrationDate registrationDate){
+    public String startRegistration(@RequestBody @Valid registrationDate registrationDate)throws ParseException{
         return (adminService.startRegistration(registrationDate));
     }
 
@@ -196,9 +196,9 @@ public class adminController {
         return adminService.EditCandidateList(id,candidate);
     }
 
-    @PostMapping("/changePassword")
-    public String changePassword(@RequestBody @Valid changePasswordRequest changePasswordRequest){
-     return adminService.changePassword(changePasswordRequest);
+    @PostMapping("/changePassword/{gmail}")
+    public String changePassword(@RequestBody @Valid changePasswordRequest changePasswordRequest,@PathVariable String gmail){
+     return adminService.changePassword(changePasswordRequest,gmail);
     }
 
     @GetMapping("/deleteAdminProfileImage/{id}")

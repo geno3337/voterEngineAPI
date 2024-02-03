@@ -2,9 +2,8 @@ package com.example.voter_engine.service;
 
 import com.example.voter_engine.Entity.*;
 import com.example.voter_engine.Request.changePasswordRequest;
-import com.example.voter_engine.Request.resetPasswordRequest;
-import com.example.voter_engine.expection.recordMismatchException;
-import com.example.voter_engine.expection.resourceNotFound;
+import com.example.voter_engine.Entity.expection.recordMismatchException;
+import com.example.voter_engine.Entity.expection.resourceNotFound;
 import com.example.voter_engine.pojo.*;
 import com.example.voter_engine.repository.*;
 import com.example.voter_engine.utility.ExcelUtil;
@@ -22,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -93,6 +91,9 @@ public class adminService {
         } else if (eventEntity.getStatus().equals("3")) {
             throw new RuntimeException( "winner is released so you cannot start the election");
         }
+        if(!electionDate.getElectionStartDate().after(eventEntity.getRegistrationEndDate())){
+            throw new RuntimeException( "election start date should be after registration endDate");
+        }
         eventEntity.setElectionStartDate(electionDate.getElectionStartDate());
         eventEntity.setElectionEndDate(electionDate.getElectionEndDate());
         eventEntity.setStatus("2");
@@ -105,17 +106,18 @@ public class adminService {
         if (eventEntityRepository.existsById(1)) {
             Optional<eventEntity> eventEntity1 = eventEntityRepository.findById(1);
             eventEntity eventEntity = eventEntity1.get();
-            if(eventEntity.getStatus() != "1"){
+            if((eventEntity.getStatus()).equals("1") ){
                 throw new RuntimeException("registration is already started");
             }
-            if (eventEntity.getStatus() == "2") {
+            if (eventEntity.getStatus().equals("2") ) {
                 throw new RuntimeException("election is started so you cannot start the registration");
-            } else if (eventEntity.getStatus() == "3") {
+            } else if (eventEntity.getStatus().equals("3")) {
                 throw new RuntimeException("winner is released so you cannot start the registration");
             }
             if (!registrationDate.getRegistrationStartDate().before(registrationDate.getRegistrationEndDate())) {
                 throw new RuntimeException("endDate should be after startDate");
             }
+
         }
         eventEntity.setId(1);
         eventEntity.setRegistrationStartDate(registrationDate.getRegistrationStartDate());
@@ -430,13 +432,13 @@ public class adminService {
         return "saved";
     }
 
-    public String changePassword(changePasswordRequest changePasswordRequest) {
+    public String changePassword(changePasswordRequest changePasswordRequest,String gmail) {
 
-        if (!userRepository.existsByPassword(changePasswordRequest.getCurrentPassword())){
-            throw new resourceNotFound( "currentPassword is invalid");
+        if (!userRepository.existsByGmail(gmail)){
+            throw new resourceNotFound( "invalid user");
         }
 
-        Optional<user> userOptional = Optional.ofNullable(userRepository.findByPassword(changePasswordRequest.getCurrentPassword()));
+        Optional<user> userOptional = Optional.ofNullable(userRepository.findByGmail(gmail));
 
         if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getConformPassword())){
             throw  new recordMismatchException( "password and conformPassword are not same");
@@ -456,7 +458,8 @@ public class adminService {
         user us=userOptional.get();
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme("http").host("localhost:8080").path("/common/getUserImage?id="+0+"&filename="+"default.jpg").build();
-        us.setProfileImage(String.valueOf(uriComponents));
+//        us.setProfileImage(String.valueOf(uriComponents));
+        us.setProfileImage(null);
         userRepository.save(us);
         return "image deleted successfully";
     }

@@ -2,12 +2,13 @@ package com.example.voter_engine.service;
 
 
 import com.example.voter_engine.Entity.*;
-import com.example.voter_engine.expection.resourceNotFound;
+import com.example.voter_engine.Entity.expection.resourceNotFound;
 import com.example.voter_engine.pojo.EmailDetails;
 import com.example.voter_engine.pojo.candidateListPojo;
 import com.example.voter_engine.pojo.userPojo;
 import com.example.voter_engine.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +49,9 @@ public class userService {
     @Autowired
     private EmailService emailService;
 
+    @Value("${spring.mail.username}")
+    private String sender;
+
 //    @Autowired
 //    private com.example.voter_engine.Entity.eventEntity eventEntity;
 
@@ -57,16 +61,25 @@ public class userService {
     @Autowired
     private ImageStorageServiceImpl imageStorageService;
 
+    @Autowired
+    private EmailQueueRepository emailQueueRepository;
+
+
     public String addVote(int id, int voter_id) throws ParseException {
         if (!eventEntityRepository.existsById(1)){
             throw new resourceNotFound("first start the registration phase");
         }
         Optional<eventEntity> eventEntity1=eventEntityRepository.findById(1);
         eventEntity eventEntity=eventEntity1.get();
-        if (eventEntity.getElectionStartDate() == null && eventEntity.getElectionEndDate() == null) {
-//            return "election is not yet started";
-            throw new resourceNotFound("election is not yet started");
+        if (eventEntity.getStatus().equals("1")){
+            throw  new RuntimeException( "election is not yet started");
+        } else if (eventEntity.getStatus().equals("3")) {
+            throw new RuntimeException( "voting is ended");
         }
+//        if (eventEntity.getElectionStartDate() == null && eventEntity.getElectionEndDate() == null) {
+////            return "election is not yet started";
+//            throw new resourceNotFound("election is not yet started");
+//        }
         Date currentDate = new Date();
         Date startDate = eventEntity.getElectionStartDate();
         Date endDate = eventEntity.getElectionEndDate();
@@ -93,7 +106,7 @@ public class userService {
             throw new resourceNotFound("you are not eligible for voting");
         } else {
 //            return "voting is ended";
-            throw new resourceNotFound("voting is ended");
+            throw new resourceNotFound("current date is not within election date");
         }
     }
 
@@ -126,6 +139,13 @@ public class userService {
         if(result.hasErrors()) {
             throw new MethodArgumentNotValidException(null, result);
         }
+        Optional<eventEntity> eventEntity1=eventEntityRepository.findById(1);
+        eventEntity eventEntity=eventEntity1.get();
+        if (eventEntity.getStatus().equals("2")){
+            throw  new RuntimeException( "registration is ended");
+        } else if (eventEntity.getStatus().equals("3")) {
+            throw new RuntimeException( "registration is ended");
+        }
 //        if(!eventEntityRepository.existsById(1)){
 //            throw new RuntimeException("registration is not yet started");
 //        }
@@ -140,6 +160,10 @@ public class userService {
 //        if(startDate.after(currentDate) && endDate.before(endDate)){
 //            throw new RuntimeException("registration is not yet started");
 //        }
+        if(!eventEntity.getStatus().equals("1"))
+        {
+            throw  new RuntimeException( "registration is not yet started");
+        }
         candidateList cl=new candidateList();
 //        cl.setId(clp.getId());
         cl.setName(clp.getName());
@@ -156,27 +180,41 @@ public class userService {
         }else{
             cl.setProfileImage(uploadCandidateProfile(clp.getGmail(),clp.getProfileImage()));
         }
+        String token=resetPasswordTokenUtil.generateToken();
+        cl.setEmailVerificationToken(token);
+        cl.setTokenCreationDate(LocalDateTime.now());
+        String link = "http://localhost:8080/common/emailTokenVerification?token=" +token;
+        String subject = "Here's the link to verify your application";
+        String content ="<p>Click the link below to verify your application:</p>"
+                        + "<p><a href=\"" + link + "\">Verify</a></p>";
+        emailQueue EQ=new emailQueue();
+        EQ.setSubject( subject);
+        EQ.setToEmails(clp.getGmail());
+        EQ.setMessage(content);
+        EQ.setStatus("pending");
+        EQ.setFromEmail(sender);
+        EQ.setNoofAttempts(0);
+        emailQueueRepository.save(EQ);
         candidateListRepository.save(cl);
-        candidateEmailVerification(clp.getGmail());
         return "success";
 
     }
 
     public String uploadCandidateProfile(String id,MultipartFile multipartFile) throws IOException {
-        if(!eventEntityRepository.existsById(1)){
-            throw new RuntimeException("registration is not yet started");
-        }
-        Optional<com.example.voter_engine.Entity.eventEntity> eventEntity1=eventEntityRepository.findById(1);
-        eventEntity eventEntity2=eventEntity1.get();
-        Date currentDate = new Date();
-        Date startDate = eventEntity2.getRegistrationStartDate();
-        Date endDate = eventEntity2.getRegistrationEndDate();
-        if (startDate == null && endDate == null) {
-            throw new RuntimeException("registration is not yet started");
-        }
-        if(startDate.after(currentDate) && endDate.before(endDate)){
-            throw new RuntimeException("registration is not yet started");
-        }
+//        if(!eventEntityRepository.existsById(1)){
+//            throw new RuntimeException("registration is not yet started");
+//        }
+//        Optional<com.example.voter_engine.Entity.eventEntity> eventEntity1=eventEntityRepository.findById(1);
+//        eventEntity eventEntity2=eventEntity1.get();
+//        Date currentDate = new Date();
+//        Date startDate = eventEntity2.getRegistrationStartDate();
+//        Date endDate = eventEntity2.getRegistrationEndDate();
+//        if (startDate == null && endDate == null) {
+//            throw new RuntimeException("registration is not yet started");
+//        }
+//        if(startDate.after(currentDate) && endDate.before(endDate)){
+//            throw new RuntimeException("registration is not yet started");
+//        }
         String fileName = StringUtils.cleanPath(multipartFile.getOriginalFilename());
 //        Optional<candidateList> candidateOptional= candidateListRepository.findByGmail(id);
 //        candidateList candi=candidateOptional.get();
@@ -197,17 +235,27 @@ public class userService {
         candidateListRepository.save(candidateList);
         String link = "http://localhost:8080/common/emailTokenVerification?token=" +token;
         String subject = "Here's the link to verify your application";
-        String content = "<p>Hello,</p>"
+        String content =
+//                "<p>Hello,</p>"
 //                + "<p>You have requested to reset your password.</p>"
-                + "<p>Click the link below to verify your application:</p>"
+                 "<p>Click the link below to verify your application:</p>"
                 + "<p><a href=\"" + link + "\">Verify</a></p>"
-                + "<br>"
-                + "<p>Ignore this email if you have not made the request.</p>";
-        EmailDetails ED=new EmailDetails();
-        ED.setSubject( subject);
-        ED.setRecipient(gmail);
-        ED.setMsgBody(content);
-        emailService.sendHtmlMail(ED);
+//                + "<br>"
+//                + "<p>Ignore this email if you have not made the request.</p>"
+                ;
+//        EmailDetails ED=new EmailDetails();
+////        ED.setSubject( subject);
+////        ED.setRecipient(gmail);
+//        ED.setMsgBody(content);
+//        emailService.sendHtmlMail(ED);
+        emailQueue EQ=new emailQueue();
+        EQ.setSubject( subject);
+        EQ.setToEmails(gmail);
+        EQ.setMessage(content);
+        EQ.setStatus("pending");
+        EQ.setFromEmail(sender);
+        EQ.setNoofAttempts(0);
+        emailQueueRepository.save(EQ);
     }
 
     public void resendEmailVerification(String gmail){
@@ -285,7 +333,8 @@ public class userService {
             user us=userOptional.get();
             UriComponents uriComponents = UriComponentsBuilder.newInstance()
                     .scheme("http").host("localhost:8080").path("/common/getUserImage?id="+0+"&filename="+"default.jpg").build();
-            us.setProfileImage(String.valueOf(uriComponents));
+//            us.setProfileImage(String.valueOf(uriComponents));
+            us.setProfileImage(null);
             userRepository.save(us);
             return "image deleted successfully";
         }

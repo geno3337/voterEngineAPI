@@ -47,8 +47,8 @@ public class candidateList {
     @Column(name = "isEmailVerified")
     private boolean isEmailVerified;
 
-    @Column(name = "isAdminVerified")
-    private boolean isAdminVerified;
+    @Column(name = "AdminVerified")
+    private boolean AdminVerified;
 
     @Column(name = "emailVerificationToken")
     private String emailVerificationToken;

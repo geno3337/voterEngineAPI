@@ -29,6 +29,7 @@ public class candidateListPojo {
     @NotNull(message = "gender field cannot be null")
     private String gender;
 
+
     @CandidateUniqueEmail( message = "email is already exist")
     @NotNull(message = "email field cannot be null")
     @Email(message = "enter a correct email")
@@ -47,7 +48,7 @@ public class candidateListPojo {
 
     private boolean isEmailVerified;
 
-    private boolean isAdminVerified;
+    private boolean AdminVerified;
 
     private String emailVerificationToken;
 

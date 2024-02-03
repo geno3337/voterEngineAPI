@@ -1,13 +1,12 @@
 package com.example.voter_engine.service;
 
 import com.example.voter_engine.Entity.candidate;
-import com.example.voter_engine.Entity.candidateList;
 import com.example.voter_engine.Entity.user;
 import com.example.voter_engine.Request.authenticationRequest;
 import com.example.voter_engine.Request.resetPasswordRequest;
 import com.example.voter_engine.Response.jwtResponse;
-import com.example.voter_engine.expection.recordMismatchException;
-import com.example.voter_engine.expection.resourceNotFound;
+import com.example.voter_engine.Entity.expection.recordMismatchException;
+import com.example.voter_engine.Entity.expection.resourceNotFound;
 import com.example.voter_engine.repository.CandidateRepository;
 import com.example.voter_engine.repository.ImageStorageService;
 import com.example.voter_engine.security.JwtUtil;
@@ -15,7 +14,6 @@ import com.example.voter_engine.utility.resetPasswordTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -179,10 +177,10 @@ public class commonService {
         return candidateRepository.findAll(page);
     }
 
-    public Page<candidateList> getcandidate(int pageNo,int size){
-        Pageable Page = PageRequest.of(pageNo, size);
-        return candidateListRepository.findAllByIsAdminVerified(true,Page);
-    }
+//    public Page<candidateList> getcandidate(int pageNo,int size){
+//        Pageable Page = PageRequest.of(pageNo, size);
+//        return candidateListRepository.findAllByAdminVerified(true,Page);
+//    }
 
 //    public List<candidate> searchCandidate(String keyword){
 //        return candidateRepository.search(keyword,page);
